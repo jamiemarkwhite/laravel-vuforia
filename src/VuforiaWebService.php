@@ -5,9 +5,11 @@ namespace Panoscape\Vuforia;
 use DateTime;
 use DateTimeZone;
 use Exception;
+use Illuminate\Support\Facades\Storage;
 use JsonSerializable;
 use HTTP_Request2;
 use HTTP_Request2_Exception;
+use HTTP_Request2_MultipartBody;
 
 /**
 * Vuforia Cloud API Service
@@ -23,6 +25,12 @@ use HTTP_Request2_Exception;
 */
 class VuforiaWebService
 {
+    /**
+     * Cloud Reco Url
+     * @var string
+     */
+    protected $cloudReco;
+
     /**
     * VWS targets url
     *
@@ -71,7 +79,6 @@ class VuforiaWebService
     * @var float
     */
     protected $maxImageSize;
-
     /**
     * Max metadata size in Bit
     *
@@ -87,6 +94,7 @@ class VuforiaWebService
     */
     function __construct($config)
     {
+        $this->cloudReco = array_get($config, 'url.cloudreco');
         $this->targets = array_get($config, 'url.targets');
         $this->duplicates = array_get($config, 'url.duplicates');
         $this->summary = array_get($config, 'url.summary');
@@ -120,6 +128,14 @@ class VuforiaWebService
     */
     function getTargets() {
         return $this->makeRequest($this->targets);
+    }
+
+    function recognizeImage($imageData) {
+        return $this->makeRequest($this->cloudReco . "/query",
+            HTTP_Request2::METHOD_POST,
+            new HTTP_Request2_MultipartBody(['image' => $imageData], []),
+            ['Content-Type' => 'multipart/form-data']
+        );
     }
     
     /**
@@ -335,7 +351,7 @@ class VuforiaWebService
             'body' => $e->getMessage()
             ];
         }
-        
+
         $request->setHeader("Authorization" , "VWS " . $this->accessKey . ":" . $signature);
 
         try {
@@ -360,18 +376,18 @@ class VuforiaWebService
         
         // The HTTP Header fields are used to authenticate the request
         $requestHeaders = $request->getHeaders();
-        
+
         // note that header names are converted to lower case
         $dateValue = $requestHeaders['date'];
         
         $requestPath = $request->getURL()->getPath();
-        
+
         $contentType = '';
         // Not all requests will define a content-type
         if( isset( $requestHeaders['content-type'] )) {
             $contentType = $requestHeaders['content-type'];
         }
-        
+
         $hexDigest = 'd41d8cd98f00b204e9800998ecf8427e';
         if ( $method == 'GET' || $method == 'DELETE' ) {
             // Do nothing because the strings are already set correctly
@@ -385,9 +401,9 @@ class VuforiaWebService
         }
         
         $toDigest = "$method\n$hexDigest\n$contentType\n$dateValue\n$requestPath";
-        
+
         $shaHashed = '';
-        
+
         // the SHA1 hash needs to be transformed from hexidecimal to Base64
         $shaHashed = $this->hexToBase64( hash_hmac("sha1", $toDigest , $secretKey) );
         

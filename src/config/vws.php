@@ -10,6 +10,16 @@ return [
     |
     */
     'url' => [
+
+        /*
+        |--------------------------------------------------------------
+        | Vuforia Cloud Recognition API Request URL
+        |--------------------------------------------------------------
+        |
+        |
+        */
+        'cloudreco' => 'https://cloudreco.vuforia.com/v1',
+
         /*
         |--------------------------------------------------------------
         | Vuforia Web Service Targets Request URL
